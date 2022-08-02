@@ -11,6 +11,7 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotEquals;
 
 
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT)
@@ -29,6 +30,16 @@ public class BlogPostControllerIT {
         ResponseEntity<BlogPost> responseEntity = this.restTemplate.postForEntity(String.format(RESOURCE_URI, localServerPort), testPosting, BlogPost.class);
         assertEquals(HttpStatus.CREATED, responseEntity.getStatusCode());
         assertEquals(localServerPort, responseEntity.getHeaders().getLocation().getPort());
+    }
+
+    @Test
+    @DisplayName("T02 - POST generates nonzero ID")
+    public void test_02() {
+        ResponseEntity<BlogPost> responseEntity = this.restTemplate.postForEntity(String.format(RESOURCE_URI, localServerPort), testPosting, BlogPost.class);
+        assertEquals(HttpStatus.CREATED, responseEntity.getStatusCode());
+        BlogPost blogPostReturned = responseEntity.getBody();
+        assertNotEquals(testPosting.getId(), blogPostReturned.getId());
+        assertEquals(String.format(RESOURCE_URI + "/%d",localServerPort, blogPostReturned.getId()),responseEntity.getHeaders().getLocation().toString());
     }
 
 }

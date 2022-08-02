@@ -1,5 +1,6 @@
 package com.spankinfresh.blog.api;
 
+import com.spankinfresh.blog.data.BlogPostRepository;
 import com.spankinfresh.blog.domain.BlogPost;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
@@ -15,11 +16,18 @@ import org.springframework.web.util.UriComponentsBuilder;
 @RequestMapping("/api/articles")
 public class BlogPostController {
 
+    private final BlogPostRepository blogPostRepository;
+
+    public BlogPostController(BlogPostRepository blogPostRepository) {
+        this.blogPostRepository = blogPostRepository;
+    }
+
     @PostMapping
     public ResponseEntity<BlogPost> createBlogEntry(@RequestBody BlogPost blogPost, UriComponentsBuilder uriComponentsBuilder) {
-        UriComponents uriComponents = uriComponentsBuilder.path("/api/articles/{id}").buildAndExpand(blogPost.getId());
+        BlogPost savedItem = blogPostRepository.save(blogPost);
+        UriComponents uriComponents = uriComponentsBuilder.path("/api/articles/{id}").buildAndExpand(savedItem.getId());
         HttpHeaders headers = new HttpHeaders();
         headers.add("Location", uriComponents.toUri().toString());
-        return new ResponseEntity<>(blogPost, headers, HttpStatus.CREATED);
+        return new ResponseEntity<>(savedItem, headers, HttpStatus.CREATED);
     }
 }
