@@ -12,6 +12,8 @@ import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.util.UriComponents;
 import org.springframework.web.util.UriComponentsBuilder;
 
+import java.time.LocalDateTime;
+
 @RestController
 @RequestMapping("/api/articles")
 public class BlogPostController {
@@ -24,6 +26,7 @@ public class BlogPostController {
 
     @PostMapping
     public ResponseEntity<BlogPost> createBlogEntry(@RequestBody BlogPost blogPost, UriComponentsBuilder uriComponentsBuilder) {
+        blogPost.setDatePosted(LocalDateTime.now());
         BlogPost savedItem = blogPostRepository.save(blogPost);
         UriComponents uriComponents = uriComponentsBuilder.path("/api/articles/{id}").buildAndExpand(savedItem.getId());
         HttpHeaders headers = new HttpHeaders();
