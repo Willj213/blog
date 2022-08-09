@@ -21,8 +21,7 @@ import java.util.Optional;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.mockito.Mockito.*;
-import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
-import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
 
 @SpringBootTest
@@ -111,5 +110,40 @@ public class BlogPostControllerTests {
         verifyNoMoreInteractions(mockRepository);
     }
 
+    @Test
+    @DisplayName("T06 - Article to be updated does not exist so PUT returns 404")
+    public void test_06(@Autowired MockMvc mockMvc) throws Exception {
+        when(mockRepository.existsById(10L)).thenReturn(false);
+        mockMvc.perform(put(RESOURCE_URI + "/10")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(mapper.writeValueAsString(new BlogPost(10L, "category", null, "title", "content"))))
+                .andExpect(status().isNotFound());
+        verify(mockRepository, never()).save(any(BlogPost.class));
+        verify(mockRepository, times(1)).existsById(10L);
+        verifyNoMoreInteractions(mockRepository);
+    }
 
+    @Test
+    @DisplayName("T07 - Article to be updated exists so PUT saves new copy")
+    public void test_07(@Autowired MockMvc mockMvc) throws Exception {
+        when(mockRepository.existsById(10L)).thenReturn(true);
+        mockMvc.perform(put(RESOURCE_URI + "/10")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(mapper.writeValueAsString(new BlogPost(10L, "category", null, "title", "content"))))
+                .andExpect(status().isNoContent());
+        verify(mockRepository, times(1)).save(any(BlogPost.class));
+        verify(mockRepository, times(1)).existsById(10L);
+        verifyNoMoreInteractions(mockRepository);
+    }
+
+    @Test
+    @DisplayName("T08 - ID in PUT URL not equal to one in request body")
+    public void test_08(@Autowired MockMvc mockMvc) throws Exception {
+        mockMvc.perform(put(RESOURCE_URI + "/100")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(mapper.writeValueAsString(new BlogPost(10L, "category", null, "title", "content"))))
+                .andExpect(status().isConflict());
+        verify(mockRepository, never()).save(any(BlogPost.class));
+        verifyNoMoreInteractions(mockRepository);
+    }
 }
