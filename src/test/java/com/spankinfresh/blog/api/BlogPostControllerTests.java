@@ -146,4 +146,26 @@ public class BlogPostControllerTests {
         verify(mockRepository, never()).save(any(BlogPost.class));
         verifyNoMoreInteractions(mockRepository);
     }
+
+    @Test
+    @DisplayName("T09 - Article to be removed does not exist so DELETE returns 404")
+    public void test_09(@Autowired MockMvc mockMvc) throws Exception {
+        when(mockRepository.findById(1L)).thenReturn(Optional.empty());
+        mockMvc.perform(delete(RESOURCE_URI + "/1"))
+                .andExpect(status().isNotFound());
+        verify(mockRepository, never()).delete(any(BlogPost.class));
+        verify(mockRepository, times(1)).findById(1L);
+        verifyNoMoreInteractions(mockRepository);
+    }
+
+    @Test
+    @DisplayName("T10 - Article to be removed exists so DELETE deletes it")
+    public void test_10(@Autowired MockMvc mockMvc) throws Exception {
+        when(mockRepository.findById(1L)).thenReturn(Optional.of(savedPosting));
+        mockMvc.perform(delete(RESOURCE_URI + "/1"))
+                .andExpect(status().isNoContent());
+        verify(mockRepository, times(1)).delete(refEq(savedPosting));
+        verify(mockRepository, times(1)).findById(1L);
+        verifyNoMoreInteractions(mockRepository);
+    }
 }
