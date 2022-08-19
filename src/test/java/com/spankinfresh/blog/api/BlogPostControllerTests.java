@@ -168,4 +168,15 @@ public class BlogPostControllerTests {
         verify(mockRepository, times(1)).findById(1L);
         verifyNoMoreInteractions(mockRepository);
     }
+
+    @Test
+    @DisplayName("T11 - POST returns 400 if required properties are not set")
+    public void test_11(@Autowired MockMvc mockMvc) throws Exception {
+        mockMvc.perform(post(RESOURCE_URI)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(mapper.writeValueAsString(new BlogPost())))
+                .andExpect(status().isBadRequest());
+        verify(mockRepository, never()).save(any(BlogPost.class));
+        verifyNoMoreInteractions(mockRepository);
+    }
 }

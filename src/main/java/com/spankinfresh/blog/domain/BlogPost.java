@@ -6,6 +6,8 @@ import javax.persistence.Entity;
 import javax.persistence.GeneratedValue;
 import javax.persistence.GenerationType;
 import javax.persistence.Id;
+import javax.validation.constraints.NotNull;
+import javax.validation.constraints.Size;
 import java.time.LocalDateTime;
 
 @Entity
@@ -14,10 +16,20 @@ public class BlogPost {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private long id;
+
+    @NotNull
+    @Size(min = 1, max = 200, message = "Please enter a category name of up to 200 characters")
     private String category;
+
     @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME)
     private LocalDateTime datePosted;
+
+    @NotNull
+    @Size(min = 1, max = 200, message = "Please enter a category name of up to 200 characters")
     private String title;
+
+    @NotNull
+    @Size(min = 1, max = 500000, message = "Content is required")
     private String content;
 
     public BlogPost() {
