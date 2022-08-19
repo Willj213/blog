@@ -25,7 +25,7 @@ public class BlogPost {
     private LocalDateTime datePosted;
 
     @NotNull
-    @Size(min = 1, max = 200, message = "Please enter a category name of up to 200 characters")
+    @Size(min = 1, max = 200, message = "Please enter a title up to 200 characters in length")
     private String title;
 
     @NotNull

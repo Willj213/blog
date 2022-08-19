@@ -179,4 +179,24 @@ public class BlogPostControllerTests {
         verify(mockRepository, never()).save(any(BlogPost.class));
         verifyNoMoreInteractions(mockRepository);
     }
+
+    @Test
+    @DisplayName("T12 - Field errors present for each invalid property")
+    public void test_12(@Autowired MockMvc mockMvc) throws Exception {
+        mockMvc.perform(post(RESOURCE_URI)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(mapper.writeValueAsString(new BlogPost())))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.fieldErrors.category").value("must not be null"))
+                .andExpect(jsonPath("$.fieldErrors.title").value("must not be null"))
+                .andExpect(jsonPath("$.fieldErrors.content").value("must not be null"));
+        mockMvc.perform(post(RESOURCE_URI)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(mapper.writeValueAsString(new BlogPost(0L, "", null, "", ""))))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.fieldErrors.category").value("Please enter a category name of up to 200 characters"))
+                .andExpect(jsonPath("$.fieldErrors.title").value("Please enter a title up to 200 characters in length"))
+                .andExpect(jsonPath("$.fieldErrors.content").value("Content is required"));
+        verify(mockRepository, never()).save(any(BlogPost.class));
+    }
 }
