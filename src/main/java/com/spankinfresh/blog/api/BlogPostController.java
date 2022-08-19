@@ -9,6 +9,7 @@ import org.springframework.web.bind.annotation.*;
 import org.springframework.web.util.UriComponents;
 import org.springframework.web.util.UriComponentsBuilder;
 
+import javax.validation.Valid;
 import java.time.LocalDateTime;
 import java.util.Collections;
 import java.util.Optional;
@@ -24,7 +25,7 @@ public class BlogPostController {
     }
 
     @PostMapping
-    public ResponseEntity<BlogPost> createBlogEntry(@RequestBody BlogPost blogPost, UriComponentsBuilder uriComponentsBuilder) {
+    public ResponseEntity<BlogPost> createBlogEntry(@Valid @RequestBody BlogPost blogPost, UriComponentsBuilder uriComponentsBuilder) {
         blogPost.setDatePosted(LocalDateTime.now());
         BlogPost savedItem = blogPostRepository.save(blogPost);
         UriComponents uriComponents = uriComponentsBuilder.path("/api/articles/{id}").buildAndExpand(savedItem.getId());
