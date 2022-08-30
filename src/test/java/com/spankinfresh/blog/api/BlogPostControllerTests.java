@@ -2,6 +2,7 @@ package com.spankinfresh.blog.api;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.spankinfresh.blog.data.BlogPostRepository;
+import com.spankinfresh.blog.domain.Author;
 import com.spankinfresh.blog.domain.BlogPost;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -32,13 +33,14 @@ public class BlogPostControllerTests {
     private BlogPostRepository mockRepository;
     private static final String RESOURCE_URI = "/api/articles";
     private final ObjectMapper mapper = new ObjectMapper();
-    private static final BlogPost testPosting = new BlogPost(0L, "category", null, "title", "content");
-    private static final BlogPost savedPosting = new BlogPost(1l, "category", LocalDateTime.now(), "title", "content");
+    private static final Author savedAuthor = new Author(1L, "Jane", "Doe", "jane@doe.com");
+    private static final BlogPost testPosting = new BlogPost(0L, "category", null, "title", "content", savedAuthor);
+    private static final BlogPost savedPosting = new BlogPost(1l, "category", LocalDateTime.now(), "title", "content", savedAuthor);
 
     @Test
     @DisplayName("T01 - POST accepts and returns blog post representation")
     public void postCreatesNewBlogEntry_Test(@Autowired MockMvc mockMvc) throws Exception {
-        when(mockRepository.save(refEq(testPosting, "datePosted"))).thenReturn(savedPosting);
+        when(mockRepository.save(refEq(testPosting, "datePosted", "author"))).thenReturn(savedPosting);
         MvcResult result = mockMvc.perform(post(RESOURCE_URI)
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(mapper.writeValueAsString(testPosting)))
@@ -48,10 +50,11 @@ public class BlogPostControllerTests {
                 .andExpect(jsonPath("$.datePosted").value(savedPosting.getDatePosted().toString().substring(0, savedPosting.getDatePosted().toString().length() - 2)))
                 .andExpect(jsonPath("$.category").value(savedPosting.getCategory()))
                 .andExpect(jsonPath("$.content").value(savedPosting.getContent()))
+                .andExpect(jsonPath("$.author.id").value(savedPosting.getAuthor().getId()))
                 .andReturn();
         MockHttpServletResponse mockResponse = result.getResponse();
         assertEquals(String.format("http://localhost/api/articles/%d", savedPosting.getId()), mockResponse.getHeader("Location"));
-        verify(mockRepository, times(1)).save(refEq(testPosting, "datePosted"));
+        verify(mockRepository, times(1)).save(refEq(testPosting, "datePosted", "author"));
         verifyNoMoreInteractions(mockRepository);
     }
 
@@ -116,7 +119,7 @@ public class BlogPostControllerTests {
         when(mockRepository.existsById(10L)).thenReturn(false);
         mockMvc.perform(put(RESOURCE_URI + "/10")
                         .contentType(MediaType.APPLICATION_JSON)
-                        .content(mapper.writeValueAsString(new BlogPost(10L, "category", null, "title", "content"))))
+                        .content(mapper.writeValueAsString(new BlogPost(10L, "category", null, "title", "content", savedAuthor))))
                 .andExpect(status().isNotFound());
         verify(mockRepository, never()).save(any(BlogPost.class));
         verify(mockRepository, times(1)).existsById(10L);
@@ -129,7 +132,7 @@ public class BlogPostControllerTests {
         when(mockRepository.existsById(10L)).thenReturn(true);
         mockMvc.perform(put(RESOURCE_URI + "/10")
                         .contentType(MediaType.APPLICATION_JSON)
-                        .content(mapper.writeValueAsString(new BlogPost(10L, "category", null, "title", "content"))))
+                        .content(mapper.writeValueAsString(new BlogPost(10L, "category", null, "title", "content", savedAuthor))))
                 .andExpect(status().isNoContent());
         verify(mockRepository, times(1)).save(any(BlogPost.class));
         verify(mockRepository, times(1)).existsById(10L);
@@ -141,7 +144,7 @@ public class BlogPostControllerTests {
     public void test_08(@Autowired MockMvc mockMvc) throws Exception {
         mockMvc.perform(put(RESOURCE_URI + "/100")
                         .contentType(MediaType.APPLICATION_JSON)
-                        .content(mapper.writeValueAsString(new BlogPost(10L, "category", null, "title", "content"))))
+                        .content(mapper.writeValueAsString(new BlogPost(10L, "category", null, "title", "content", savedAuthor))))
                 .andExpect(status().isConflict());
         verify(mockRepository, never()).save(any(BlogPost.class));
         verifyNoMoreInteractions(mockRepository);
@@ -192,7 +195,7 @@ public class BlogPostControllerTests {
                 .andExpect(jsonPath("$.fieldErrors.content").value("must not be null"));
         mockMvc.perform(post(RESOURCE_URI)
                         .contentType(MediaType.APPLICATION_JSON)
-                        .content(mapper.writeValueAsString(new BlogPost(0L, "", null, "", ""))))
+                        .content(mapper.writeValueAsString(new BlogPost(0L, "", null, "", "", savedAuthor))))
                 .andExpect(status().isBadRequest())
                 .andExpect(jsonPath("$.fieldErrors.category").value("Please enter a category name of up to 200 characters"))
                 .andExpect(jsonPath("$.fieldErrors.title").value("Please enter a title up to 200 characters in length"))
