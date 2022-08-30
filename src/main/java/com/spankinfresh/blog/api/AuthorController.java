@@ -2,7 +2,6 @@ package com.spankinfresh.blog.api;
 
 import com.spankinfresh.blog.data.AuthorRepository;
 import com.spankinfresh.blog.domain.Author;
-import com.spankinfresh.blog.domain.BlogPost;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;

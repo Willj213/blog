@@ -3,7 +3,6 @@ package com.spankinfresh.blog.api;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.spankinfresh.blog.data.AuthorRepository;
 import com.spankinfresh.blog.domain.Author;
-import com.spankinfresh.blog.domain.BlogPost;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -189,7 +188,7 @@ public class AuthorControllerTests {
                 .andExpect(jsonPath("$.fieldErrors.emailAddress").value("must not be null"));
         mockMvc.perform(post(RESOURCE_URI)
                         .contentType(MediaType.APPLICATION_JSON)
-                        .content(mapper.writeValueAsString(new Author(0L, "",  "", ""))))
+                        .content(mapper.writeValueAsString(new Author(0L, "", "", ""))))
                 .andExpect(status().isBadRequest())
                 .andExpect(jsonPath("$.fieldErrors.firstName").value("First name should be between 1 and 80 characters"))
                 .andExpect(jsonPath("$.fieldErrors.lastName").value("Last name should be between 1 and 80 characters"));
