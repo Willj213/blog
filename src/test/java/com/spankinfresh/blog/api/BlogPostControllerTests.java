@@ -10,6 +10,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.test.mock.mockito.MockBean;
+import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
 import org.springframework.mock.web.MockHttpServletResponse;
 import org.springframework.test.web.servlet.MockMvc;
@@ -20,6 +21,7 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Optional;
 
+import static org.hamcrest.Matchers.hasItems;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.mockito.Mockito.*;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
@@ -201,5 +203,42 @@ public class BlogPostControllerTests {
                 .andExpect(jsonPath("$.fieldErrors.title").value("Please enter a title up to 200 characters in length"))
                 .andExpect(jsonPath("$.fieldErrors.content").value("Content is required"));
         verify(mockRepository, never()).save(any(BlogPost.class));
+    }
+
+    @Test
+    @DisplayName("T13 - Get requests have proper CORS headers")
+    public void test_13(@Autowired MockMvc mockMvc) throws Exception {
+        when(mockRepository.findAll()).thenReturn(Collections.singletonList(savedPosting));
+        mockMvc.perform(get(RESOURCE_URI))
+                .andExpect(status().isOk())
+                .andExpect(header().stringValues(HttpHeaders.VARY,
+                        hasItems("Origin", "Access-Control-Request-Method", "Access-Control-Request-Headers")));
+    }
+
+    @Test
+    @DisplayName("T14 - Get by category name returns expected data")
+    public void test_14(@Autowired MockMvc mockMvc) throws Exception {
+        when(mockRepository.findByCategoryOrderByDatePostedDesc("foo")).thenReturn(Collections.singletonList(savedPosting));
+        mockMvc.perform(get(RESOURCE_URI + "/category")
+                        .param("categoryName", "foo"))
+                .andExpect(jsonPath("$.length()").value(1))
+                .andExpect(content().contentType(MediaType.APPLICATION_JSON))
+                .andExpect(jsonPath("$.[0].id").value(savedPosting.getId()))
+                .andExpect(jsonPath("$.[0].title").value(savedPosting.getTitle()))
+                .andExpect(jsonPath("$.[0].datePosted").value(savedPosting.getDatePosted().toString().substring(0, savedPosting.getDatePosted().toString().length() - 2)))
+                .andExpect(jsonPath("$.[0].category").value(savedPosting.getCategory()))
+                .andExpect(jsonPath("$.[0].content").value(savedPosting.getContent()))
+                .andExpect(status().isOk());
+        verify(mockRepository, times(1)).findByCategoryOrderByDatePostedDesc("foo");
+        verifyNoMoreInteractions(mockRepository);
+    }
+
+    @Test
+    @DisplayName("T15 - Get by category without a category = bad request")
+    public void test_15(@Autowired MockMvc mockMvc) throws Exception {
+        mockMvc.perform(get(RESOURCE_URI + "/category"))
+                .andExpect(status().isBadRequest());
+        verify(mockRepository, never()).findByCategoryOrderByDatePostedDesc(anyString());
+        verifyNoMoreInteractions(mockRepository);
     }
 }
