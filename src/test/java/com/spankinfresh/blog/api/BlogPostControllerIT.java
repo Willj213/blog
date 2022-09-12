@@ -1,8 +1,11 @@
 package com.spankinfresh.blog.api;
 
+import com.spankinfresh.blog.domain.Author;
 import com.spankinfresh.blog.domain.BlogPost;
+import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.TestInstance;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.test.web.client.TestRestTemplate;
@@ -14,6 +17,7 @@ import static org.junit.jupiter.api.Assertions.*;
 
 
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT)
+@TestInstance(TestInstance.Lifecycle.PER_CLASS)
 public class BlogPostControllerIT {
 
     @LocalServerPort
@@ -21,7 +25,16 @@ public class BlogPostControllerIT {
     @Autowired
     private TestRestTemplate restTemplate;
     private static final String RESOURCE_URI = "http://localhost:%d/api/articles";
-    private static final BlogPost testPosting = new BlogPost(0L, "category", null, "title", "content");
+    private static final BlogPost testPosting = new BlogPost(0L, "category", null, "title", "content", null);
+
+    @BeforeAll
+    public void createAuthor() {
+        ResponseEntity<Author> responseEntity = this.restTemplate.postForEntity(
+                String.format("http://localhost:%d/api/authors", localServerPort),
+                new Author(0L, "Jane", "Doe", "jane@doe.com"), Author.class);
+        assertEquals(HttpStatus.CREATED, responseEntity.getStatusCode());
+        testPosting.setAuthor(responseEntity.getBody());
+    }
 
     @Test
     @DisplayName("T01 - POSTed location includes server port when created")

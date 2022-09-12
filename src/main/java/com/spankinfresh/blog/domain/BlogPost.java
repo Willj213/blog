@@ -2,10 +2,7 @@ package com.spankinfresh.blog.domain;
 
 import org.springframework.format.annotation.DateTimeFormat;
 
-import javax.persistence.Entity;
-import javax.persistence.GeneratedValue;
-import javax.persistence.GenerationType;
-import javax.persistence.Id;
+import javax.persistence.*;
 import javax.validation.constraints.NotNull;
 import javax.validation.constraints.Size;
 import java.time.LocalDateTime;
@@ -32,15 +29,20 @@ public class BlogPost {
     @Size(min = 1, max = 500000, message = "Content is required")
     private String content;
 
+    @NotNull
+    @ManyToOne
+    private Author author;
+
     public BlogPost() {
     }
 
-    public BlogPost(long id, String category, LocalDateTime datePosted, String title, String content) {
+    public BlogPost(long id, String category, LocalDateTime datePosted, String title, String content, Author author) {
         this.id = id;
         this.category = category;
         this.datePosted = datePosted;
         this.title = title;
         this.content = content;
+        this.author = author;
     }
 
     public long getId() {
@@ -81,5 +83,13 @@ public class BlogPost {
 
     public void setContent(String content) {
         this.content = content;
+    }
+
+    public Author getAuthor() {
+        return author;
+    }
+
+    public void setAuthor(Author author) {
+        this.author = author;
     }
 }

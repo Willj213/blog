@@ -2,6 +2,7 @@ package com.spankinfresh.blog.api;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.spankinfresh.blog.data.BlogPostRepository;
+import com.spankinfresh.blog.domain.Author;
 import com.spankinfresh.blog.domain.BlogPost;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -9,6 +10,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.test.mock.mockito.MockBean;
+import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
 import org.springframework.mock.web.MockHttpServletResponse;
 import org.springframework.test.web.servlet.MockMvc;
@@ -19,6 +21,7 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Optional;
 
+import static org.hamcrest.Matchers.hasItems;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.mockito.Mockito.*;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
@@ -32,13 +35,14 @@ public class BlogPostControllerTests {
     private BlogPostRepository mockRepository;
     private static final String RESOURCE_URI = "/api/articles";
     private final ObjectMapper mapper = new ObjectMapper();
-    private static final BlogPost testPosting = new BlogPost(0L, "category", null, "title", "content");
-    private static final BlogPost savedPosting = new BlogPost(1l, "category", LocalDateTime.now(), "title", "content");
+    private static final Author savedAuthor = new Author(1L, "Jane", "Doe", "jane@doe.com");
+    private static final BlogPost testPosting = new BlogPost(0L, "category", null, "title", "content", savedAuthor);
+    private static final BlogPost savedPosting = new BlogPost(1l, "category", LocalDateTime.now(), "title", "content", savedAuthor);
 
     @Test
     @DisplayName("T01 - POST accepts and returns blog post representation")
     public void postCreatesNewBlogEntry_Test(@Autowired MockMvc mockMvc) throws Exception {
-        when(mockRepository.save(refEq(testPosting, "datePosted"))).thenReturn(savedPosting);
+        when(mockRepository.save(refEq(testPosting, "datePosted", "author"))).thenReturn(savedPosting);
         MvcResult result = mockMvc.perform(post(RESOURCE_URI)
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(mapper.writeValueAsString(testPosting)))
@@ -48,10 +52,11 @@ public class BlogPostControllerTests {
                 .andExpect(jsonPath("$.datePosted").value(savedPosting.getDatePosted().toString().substring(0, savedPosting.getDatePosted().toString().length() - 2)))
                 .andExpect(jsonPath("$.category").value(savedPosting.getCategory()))
                 .andExpect(jsonPath("$.content").value(savedPosting.getContent()))
+                .andExpect(jsonPath("$.author.id").value(savedPosting.getAuthor().getId()))
                 .andReturn();
         MockHttpServletResponse mockResponse = result.getResponse();
         assertEquals(String.format("http://localhost/api/articles/%d", savedPosting.getId()), mockResponse.getHeader("Location"));
-        verify(mockRepository, times(1)).save(refEq(testPosting, "datePosted"));
+        verify(mockRepository, times(1)).save(refEq(testPosting, "datePosted", "author"));
         verifyNoMoreInteractions(mockRepository);
     }
 
@@ -116,7 +121,7 @@ public class BlogPostControllerTests {
         when(mockRepository.existsById(10L)).thenReturn(false);
         mockMvc.perform(put(RESOURCE_URI + "/10")
                         .contentType(MediaType.APPLICATION_JSON)
-                        .content(mapper.writeValueAsString(new BlogPost(10L, "category", null, "title", "content"))))
+                        .content(mapper.writeValueAsString(new BlogPost(10L, "category", null, "title", "content", savedAuthor))))
                 .andExpect(status().isNotFound());
         verify(mockRepository, never()).save(any(BlogPost.class));
         verify(mockRepository, times(1)).existsById(10L);
@@ -129,7 +134,7 @@ public class BlogPostControllerTests {
         when(mockRepository.existsById(10L)).thenReturn(true);
         mockMvc.perform(put(RESOURCE_URI + "/10")
                         .contentType(MediaType.APPLICATION_JSON)
-                        .content(mapper.writeValueAsString(new BlogPost(10L, "category", null, "title", "content"))))
+                        .content(mapper.writeValueAsString(new BlogPost(10L, "category", null, "title", "content", savedAuthor))))
                 .andExpect(status().isNoContent());
         verify(mockRepository, times(1)).save(any(BlogPost.class));
         verify(mockRepository, times(1)).existsById(10L);
@@ -141,7 +146,7 @@ public class BlogPostControllerTests {
     public void test_08(@Autowired MockMvc mockMvc) throws Exception {
         mockMvc.perform(put(RESOURCE_URI + "/100")
                         .contentType(MediaType.APPLICATION_JSON)
-                        .content(mapper.writeValueAsString(new BlogPost(10L, "category", null, "title", "content"))))
+                        .content(mapper.writeValueAsString(new BlogPost(10L, "category", null, "title", "content", savedAuthor))))
                 .andExpect(status().isConflict());
         verify(mockRepository, never()).save(any(BlogPost.class));
         verifyNoMoreInteractions(mockRepository);
@@ -192,11 +197,48 @@ public class BlogPostControllerTests {
                 .andExpect(jsonPath("$.fieldErrors.content").value("must not be null"));
         mockMvc.perform(post(RESOURCE_URI)
                         .contentType(MediaType.APPLICATION_JSON)
-                        .content(mapper.writeValueAsString(new BlogPost(0L, "", null, "", ""))))
+                        .content(mapper.writeValueAsString(new BlogPost(0L, "", null, "", "", savedAuthor))))
                 .andExpect(status().isBadRequest())
                 .andExpect(jsonPath("$.fieldErrors.category").value("Please enter a category name of up to 200 characters"))
                 .andExpect(jsonPath("$.fieldErrors.title").value("Please enter a title up to 200 characters in length"))
                 .andExpect(jsonPath("$.fieldErrors.content").value("Content is required"));
         verify(mockRepository, never()).save(any(BlogPost.class));
+    }
+
+    @Test
+    @DisplayName("T13 - Get requests have proper CORS headers")
+    public void test_13(@Autowired MockMvc mockMvc) throws Exception {
+        when(mockRepository.findAll()).thenReturn(Collections.singletonList(savedPosting));
+        mockMvc.perform(get(RESOURCE_URI))
+                .andExpect(status().isOk())
+                .andExpect(header().stringValues(HttpHeaders.VARY,
+                        hasItems("Origin", "Access-Control-Request-Method", "Access-Control-Request-Headers")));
+    }
+
+    @Test
+    @DisplayName("T14 - Get by category name returns expected data")
+    public void test_14(@Autowired MockMvc mockMvc) throws Exception {
+        when(mockRepository.findByCategoryOrderByDatePostedDesc("foo")).thenReturn(Collections.singletonList(savedPosting));
+        mockMvc.perform(get(RESOURCE_URI + "/category")
+                        .param("categoryName", "foo"))
+                .andExpect(jsonPath("$.length()").value(1))
+                .andExpect(content().contentType(MediaType.APPLICATION_JSON))
+                .andExpect(jsonPath("$.[0].id").value(savedPosting.getId()))
+                .andExpect(jsonPath("$.[0].title").value(savedPosting.getTitle()))
+                .andExpect(jsonPath("$.[0].datePosted").value(savedPosting.getDatePosted().toString().substring(0, savedPosting.getDatePosted().toString().length() - 2)))
+                .andExpect(jsonPath("$.[0].category").value(savedPosting.getCategory()))
+                .andExpect(jsonPath("$.[0].content").value(savedPosting.getContent()))
+                .andExpect(status().isOk());
+        verify(mockRepository, times(1)).findByCategoryOrderByDatePostedDesc("foo");
+        verifyNoMoreInteractions(mockRepository);
+    }
+
+    @Test
+    @DisplayName("T15 - Get by category without a category = bad request")
+    public void test_15(@Autowired MockMvc mockMvc) throws Exception {
+        mockMvc.perform(get(RESOURCE_URI + "/category"))
+                .andExpect(status().isBadRequest());
+        verify(mockRepository, never()).findByCategoryOrderByDatePostedDesc(anyString());
+        verifyNoMoreInteractions(mockRepository);
     }
 }
