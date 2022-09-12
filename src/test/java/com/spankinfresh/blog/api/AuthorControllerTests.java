@@ -4,7 +4,6 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.json.JsonMapper;
 import com.spankinfresh.blog.data.AuthorRepository;
 import com.spankinfresh.blog.domain.Author;
-import com.spankinfresh.blog.domain.BlogPost;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -24,6 +23,7 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.mockito.Mockito.*;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
+import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.jwt;
 
 @SpringBootTest
 @AutoConfigureMockMvc
@@ -40,7 +40,7 @@ public class AuthorControllerTests {
     @DisplayName("T01 - POST accepts and returns author representation")
     public void test_01(@Autowired MockMvc mockMvc) throws Exception {
         when(mockRepository.save(any(Author.class))).thenReturn(savedAuthor);
-        MvcResult result = mockMvc.perform(post(RESOURCE_URI)
+        MvcResult result = mockMvc.perform(post(RESOURCE_URI).with(jwt())
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(mapper.writeValueAsString(testAuthor)))
                 .andExpect(status().isCreated())
@@ -112,7 +112,7 @@ public class AuthorControllerTests {
     @DisplayName("T06 - Author to be updated does not exist so PUT returns 404")
     public void test_06(@Autowired MockMvc mockMvc) throws Exception {
         when(mockRepository.existsById(10L)).thenReturn(false);
-        mockMvc.perform(put(RESOURCE_URI + "/10")
+        mockMvc.perform(put(RESOURCE_URI + "/10").with(jwt())
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(mapper.writeValueAsString(new Author(10L, "first", "last", "email@test.com"))))
                 .andExpect(status().isNotFound());
@@ -125,7 +125,7 @@ public class AuthorControllerTests {
     @DisplayName("T07 - Author to be updated exists so PUT saves new copy")
     public void test_07(@Autowired MockMvc mockMvc) throws Exception {
         when(mockRepository.existsById(10L)).thenReturn(true);
-        mockMvc.perform(put(RESOURCE_URI + "/10")
+        mockMvc.perform(put(RESOURCE_URI + "/10").with(jwt())
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(mapper.writeValueAsString(new Author(10L, "first", "last", "email@test.com"))))
                 .andExpect(status().isNoContent());
@@ -137,7 +137,7 @@ public class AuthorControllerTests {
     @Test
     @DisplayName("T08 - ID in PUT URL not equal to one in request body")
     public void test_08(@Autowired MockMvc mockMvc) throws Exception {
-        mockMvc.perform(put(RESOURCE_URI + "/100")
+        mockMvc.perform(put(RESOURCE_URI + "/100").with(jwt())
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(mapper.writeValueAsString(new Author(10L, "first", "last", "email@test.com"))))
                 .andExpect(status().isConflict());
@@ -149,7 +149,7 @@ public class AuthorControllerTests {
     @DisplayName("T09 - Author to be removed does not exist so DELETE returns 404")
     public void test_09(@Autowired MockMvc mockMvc) throws Exception {
         when(mockRepository.findById(1L)).thenReturn(Optional.empty());
-        mockMvc.perform(delete(RESOURCE_URI + "/1"))
+        mockMvc.perform(delete(RESOURCE_URI + "/1").with(jwt()))
                 .andExpect(status().isNotFound());
         verify(mockRepository, never()).delete(any(Author.class));
         verify(mockRepository, times(1)).findById(1L);
@@ -160,7 +160,7 @@ public class AuthorControllerTests {
     @DisplayName("T10 - Author to be removed exists so DELETE deletes it")
     public void test_10(@Autowired MockMvc mockMvc) throws Exception {
         when(mockRepository.findById(1L)).thenReturn(Optional.of(savedAuthor));
-        mockMvc.perform(delete(RESOURCE_URI + "/1"))
+        mockMvc.perform(delete(RESOURCE_URI + "/1").with(jwt()))
                 .andExpect(status().isNoContent());
         verify(mockRepository, times(1)).delete(refEq(savedAuthor));
         verify(mockRepository, times(1)).findById(1L);
@@ -170,7 +170,7 @@ public class AuthorControllerTests {
     @Test
     @DisplayName("T11 - POST returns 400 if required properties are not set")
     public void test_11(@Autowired MockMvc mockMvc) throws Exception {
-        mockMvc.perform(post(RESOURCE_URI)
+        mockMvc.perform(post(RESOURCE_URI).with(jwt())
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(mapper.writeValueAsString(new Author())))
                 .andExpect(status().isBadRequest());
@@ -181,14 +181,14 @@ public class AuthorControllerTests {
     @Test
     @DisplayName("T12 - Field errors present for each invalid property")
     public void test_12(@Autowired MockMvc mockMvc) throws Exception {
-        mockMvc.perform(post(RESOURCE_URI)
+        mockMvc.perform(post(RESOURCE_URI).with(jwt())
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(mapper.writeValueAsString(new Author())))
                 .andExpect(status().isBadRequest())
                 .andExpect(jsonPath("$.fieldErrors.firstName").value("must not be null"))
                 .andExpect(jsonPath("$.fieldErrors.lastName").value("must not be null"))
                 .andExpect(jsonPath("$.fieldErrors.emailAddress").value("must not be null"));
-        mockMvc.perform(post(RESOURCE_URI)
+        mockMvc.perform(post(RESOURCE_URI).with(jwt())
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(mapper.writeValueAsString(new Author(0L, "", "", ""))))
                 .andExpect(status().isBadRequest())
