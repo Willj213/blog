@@ -1,8 +1,10 @@
 package com.spankinfresh.blog.api;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.json.JsonMapper;
 import com.spankinfresh.blog.data.AuthorRepository;
 import com.spankinfresh.blog.domain.Author;
+import com.spankinfresh.blog.domain.BlogPost;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -193,5 +195,38 @@ public class AuthorControllerTests {
                 .andExpect(jsonPath("$.fieldErrors.firstName").value("First name should be between 1 and 80 characters"))
                 .andExpect(jsonPath("$.fieldErrors.lastName").value("Last name should be between 1 and 80 characters"));
         verify(mockRepository, never()).save(any(Author.class));
+    }
+
+
+    @Test
+    @DisplayName("ST01: POST without JWT is forbidden")
+    public void sTest01(@Autowired MockMvc mockMvc) throws Exception {
+        when(mockRepository.save(any(Author.class))).thenReturn(savedAuthor);
+        mockMvc.perform(post(RESOURCE_URI)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(mapper.writeValueAsString(testAuthor)))
+                .andExpect(status().isForbidden());
+        verify(mockRepository, never()).save(any(Author.class));
+    }
+
+    @Test
+    @DisplayName("ST02: PUT without JWT is forbidden")
+    public void sTest02(@Autowired MockMvc mockMvc) throws Exception {
+        ObjectMapper mapper = JsonMapper.builder().findAndAddModules().build();
+        when(mockRepository.existsById(anyLong())).thenReturn(true);
+        mockMvc.perform(put(RESOURCE_URI + "/1")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(mapper.writeValueAsString(savedAuthor)))
+                .andExpect(status().isForbidden());
+        verify(mockRepository, never()).save(any(Author.class));
+    }
+
+    @Test
+    @DisplayName("ST03: DELETE without JWT is forbidden")
+    public void sTest03(@Autowired MockMvc mockMvc) throws Exception {
+        when(mockRepository.findById(1L)).thenReturn(Optional.of(savedAuthor));
+        mockMvc.perform(delete(RESOURCE_URI + "/1"))
+                .andExpect(status().isForbidden());
+        verify(mockRepository, never()).delete(any(Author.class));
     }
 }
